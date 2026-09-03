@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { getAllParts, updateStock, exportToExcel } = require('../controllers/partController');
+// Import the new functions here
+const { getAllParts, updateStock, exportToExcel, addPart, deletePart } = require('../controllers/partController');
 
-// Export route MUST be defined before /:id routes so Express doesn't confuse 'export' with an ID
 router.get('/export', exportToExcel);
-
-// Fetch all items
 router.get('/', getAllParts);
-
-// Update stock (+ or -)
 router.patch('/:id/stock', updateStock);
+
+// Add the new routes here
+router.post('/', addPart);
+router.delete('/:id', deletePart);
 
 module.exports = router;

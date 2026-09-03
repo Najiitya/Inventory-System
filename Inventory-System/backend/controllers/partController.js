@@ -83,6 +83,47 @@ const exportToExcel = async (req, res) => {
     console.error('Excel export failed:', error.message);
     res.status(500).json({ error: 'Failed to generate Excel file' });
   }
+
+  // Add a new part
+const addPart = async (req, res) => {
+  try {
+    const { name, brand_name, stock_items } = req.body;
+    
+    const query = `
+      INSERT INTO parts (name, brand_name, stock_items) 
+      VALUES ($1, $2, $3) 
+      RETURNING *;
+    `;
+    
+    // Default to 0 if they don't type a starting stock number
+    const startStock = stock_items ? parseInt(stock_items) : 0;
+    
+    const { rows } = await pool.query(query, [name, brand_name, startStock]);
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error('Error adding part:', error.message);
+    res.status(500).json({ error: 'Failed to add part' });
+  }
 };
 
-module.exports = { getAllParts, updateStock, exportToExcel };
+// Delete a part
+const deletePart = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const query = 'DELETE FROM parts WHERE id = $1 RETURNING *;';
+    const { rows } = await pool.query(query, [id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Part not found' });
+    }
+
+    res.status(200).json({ message: 'Part deleted', deletedId: id });
+  } catch (error) {
+    console.error('Error deleting part:', error.message);
+    res.status(500).json({ error: 'Failed to delete part' });
+  }
+}
+};
+
+module.exports = { getAllParts, updateStock, exportToExcel, addPart, deletePart };
