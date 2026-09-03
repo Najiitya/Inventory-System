@@ -1,122 +1,73 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import api from './api/axiosConfig';
+import ItemCard from './components/ItemCard';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [parts, setParts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Fetch all parts from PostgreSQL when the app loads
+  useEffect(() => {
+    const fetchParts = async () => {
+      try {
+        const response = await api.get('/parts');
+        setParts(response.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchParts();
+  }, []);
+
+  // Filter parts based on search
+  const filteredParts = parts.filter(part => 
+    part.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    part.brand_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Trigger the browser to download the Excel file
+  const handleExport = () => {
+    window.location.href = 'http://localhost:5000/api/parts/export';
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="min-h-screen p-8 bg-gray-50">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Header & Export Button */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-4xl font-black text-gray-800">Inventory System</h1>
+          <button 
+            onClick={handleExport}
+            className="px-6 py-3 text-xl font-bold text-white bg-blue-600 rounded-xl shadow-md hover:bg-blue-700"
+          >
+            📥 Export to Excel
+          </button>
         </div>
+
+        {/* Big Search Bar */}
+        <div className="mb-8">
+          <input 
+            type="text" 
+            placeholder="Search by part name or brand..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-6 text-2xl border-4 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* Inventory List */}
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
+          {filteredParts.length > 0 ? (
+            filteredParts.map(part => (
+              <ItemCard key={part.id} initialPart={part} />
+            ))
+          ) : (
+            <p className="text-2xl text-center text-gray-500 mt-12">No parts found matching your search.</p>
+          )}
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </div>
+    </div>
+  );
 }
-
-export default App
