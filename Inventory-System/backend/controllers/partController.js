@@ -1,5 +1,8 @@
 const pool = require('../config/db');
 const ExcelJS = require('exceljs');
+const multer = require('multer');
+const fs = require('fs');
+const csv = require('csv-parser');
 
 // 1. Fetch all inventory parts
 const getAllParts = async (req, res) => {
@@ -123,5 +126,68 @@ const deletePart = async (req, res) => {
   }
 };
 
+// 6. User Login
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1 AND password = $2', [email, password]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    
+    res.status(200).json({ message: 'Login successful', user: { email: rows[0].email } });
+  } catch (error) {
+    console.error('Login error:', error.message);
+    res.status(500).json({ error: 'Server error during login' });
+  }
+};
+
+// 7. CSV Import Setup
+const upload = multer({ dest: 'uploads/' });
+
+const importCSV = async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No CSV file uploaded' });
+
+  const results = [];
+  
+  // Read the CSV file
+  fs.createReadStream(req.file.path)
+    .pipe(csv())
+    .on('data', (data) => {
+      // Map only the allowed columns, ignoring everything else
+      results.push({
+        name: data.name || data.Name || 'Unknown Part',
+        brand_name: data.brand_name || data.Brand || 'Unknown Brand',
+        stock_items: parseInt(data.stock_items) || parseInt(data.Stock) || 0
+      });
+    })
+    .on('end', async () => {
+      try {
+        for (const item of results) {
+          await pool.query(
+            'INSERT INTO parts (name, brand_name, stock_items) VALUES ($1, $2, $3)',
+            [item.name, item.brand_name, item.stock_items]
+          );
+        }
+        
+        fs.unlinkSync(req.file.path);
+        res.status(200).json({ message: `Successfully imported ${results.length} items.` });
+      } catch (error) {
+        console.error('Database insertion error:', error);
+        res.status(500).json({ error: 'Failed to save CSV data to database' });
+      }
+    });
+};
+
 // MUST BE AT THE VERY BOTTOM
-module.exports = { getAllParts, updateStock, exportToExcel, addPart, deletePart };
+module.exports = { 
+  getAllParts, 
+  updateStock, 
+  exportToExcel, 
+  addPart, 
+  deletePart,
+  loginUser,
+  importCSV,
+  upload
+};
