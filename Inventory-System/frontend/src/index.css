@@ -1,20 +1,18 @@
-/* 1. Import a clean, highly readable modern font */
+/* 1. Import Tailwind (Version 4 syntax) */
+@import "tailwindcss";
+
+/* 2. Import a clean, highly readable modern font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
 
-/* Keep the Tailwind base directives */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* 2. Apply the custom font globally */
+/* 3. Apply the custom font globally */
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #f8fafc; /* Matches Tailwind's gray-50 */
+  background-color: #f8fafc; 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 3. Custom, thicker scrollbar for easier navigation */
+/* 4. Custom, thicker scrollbar for easier navigation */
 ::-webkit-scrollbar {
   width: 14px;
   height: 14px;
@@ -28,14 +26,14 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1; 
   border-radius: 8px;
-  border: 3px solid #f1f5f9; /* Creates a nice padding effect */
+  border: 3px solid #f1f5f9; 
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8; 
 }
 
-/* 4. Remove tiny default arrows from number inputs to force users to use your big buttons */
+/* 5. Remove tiny default arrows from number inputs */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
   -webkit-appearance: none; 
@@ -43,11 +41,11 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 input[type=number] {
-  -moz-appearance: textfield; /* For Firefox */
+  -moz-appearance: textfield; 
 }
 
-/* 5. Smooth fade-in animation for table rows */
-tbody tr {
+/* 6. Smooth fade-in animation for table rows */
+tbody tr, .flex-col {
   animation: fadeInRow 0.3s ease-out forwards;
 }
 
