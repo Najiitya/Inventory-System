@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import api from '../api/axiosConfig';
 
-export default function ItemCard({ initialPart }) {
+export default function ItemCard({ initialPart, onDelete }) {
   const [part, setPart] = useState(initialPart);
 
   // Calculate status visually based on the PostgreSQL stock_items integer
@@ -38,14 +38,24 @@ export default function ItemCard({ initialPart }) {
   return (
     <div className="flex items-center justify-between p-6 mb-4 bg-white border-2 border-gray-200 rounded-xl shadow-sm">
       
-      {/* Left Side: Info & Badge */}
+      {/* Left Side: Info, Badge, and Delete Button */}
       <div>
         <h2 className="text-2xl font-bold text-gray-800">{part.name}</h2>
         <p className="text-xl text-gray-500 mb-3">{part.brand_name}</p>
         
-        <span className={`px-4 py-2 text-lg font-bold rounded-lg ${statusColor}`}>
-          {statusText}
-        </span>
+        <div className="flex items-center gap-6 mt-2">
+          <span className={`px-4 py-2 text-lg font-bold rounded-lg ${statusColor}`}>
+            {statusText}
+          </span>
+          
+          {/* The new Delete Button */}
+          <button 
+            onClick={onDelete}
+            className="text-lg font-bold text-red-500 hover:text-red-700 hover:underline focus:outline-none"
+          >
+            Delete Item
+          </button>
+        </div>
       </div>
 
       {/* Right Side: Massive Buttons */}
@@ -53,7 +63,7 @@ export default function ItemCard({ initialPart }) {
         <button 
           onClick={() => handleStockChange(-1)}
           disabled={part.stock_items === 0}
-          className="flex items-center justify-center w-20 h-20 text-5xl font-bold text-white bg-red-500 rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md hover:bg-red-600 active:bg-red-700"
+          className="flex items-center justify-center w-20 h-20 text-5xl font-bold text-white bg-red-500 rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md hover:bg-red-600 active:bg-red-700 transition-colors"
         >
           -
         </button>
@@ -64,7 +74,7 @@ export default function ItemCard({ initialPart }) {
 
         <button 
           onClick={() => handleStockChange(1)}
-          className="flex items-center justify-center w-20 h-20 text-5xl font-bold text-white bg-green-500 rounded-xl shadow-md hover:bg-green-600 active:bg-green-700"
+          className="flex items-center justify-center w-20 h-20 text-5xl font-bold text-white bg-green-500 rounded-xl shadow-md hover:bg-green-600 active:bg-green-700 transition-colors"
         >
           +
         </button>

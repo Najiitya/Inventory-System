@@ -16,7 +16,7 @@ const getAllParts = async (req, res) => {
 const updateStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { change } = req.body; // Expects { change: 1 } or { change: -1 }
+    const { change } = req.body; 
 
     const query = `
       UPDATE parts 
@@ -54,12 +54,10 @@ const exportToExcel = async (req, res) => {
       { header: 'Status', key: 'status', width: 20 },
     ];
 
-    // Style the header
     worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
     worksheet.getRow(1).alignment = { horizontal: 'center' };
 
-    // Add data dynamically
     rows.forEach((part) => {
       let statusText = 'Available';
       if (part.stock_items === 0) statusText = 'Out of Stock';
@@ -83,8 +81,9 @@ const exportToExcel = async (req, res) => {
     console.error('Excel export failed:', error.message);
     res.status(500).json({ error: 'Failed to generate Excel file' });
   }
+};
 
-  // Add a new part
+// 4. Add a new part
 const addPart = async (req, res) => {
   try {
     const { name, brand_name, stock_items } = req.body;
@@ -95,7 +94,6 @@ const addPart = async (req, res) => {
       RETURNING *;
     `;
     
-    // Default to 0 if they don't type a starting stock number
     const startStock = stock_items ? parseInt(stock_items) : 0;
     
     const { rows } = await pool.query(query, [name, brand_name, startStock]);
@@ -106,7 +104,7 @@ const addPart = async (req, res) => {
   }
 };
 
-// Delete a part
+// 5. Delete a part
 const deletePart = async (req, res) => {
   try {
     const { id } = req.params;
@@ -123,7 +121,7 @@ const deletePart = async (req, res) => {
     console.error('Error deleting part:', error.message);
     res.status(500).json({ error: 'Failed to delete part' });
   }
-}
 };
 
+// MUST BE AT THE VERY BOTTOM
 module.exports = { getAllParts, updateStock, exportToExcel, addPart, deletePart };
