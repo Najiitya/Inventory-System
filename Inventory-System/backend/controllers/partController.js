@@ -180,6 +180,18 @@ const importCSV = async (req, res) => {
     });
 };
 
+// --- NEW: Delete All Parts ---
+const deleteAllParts = async (req, res) => {
+  try {
+    // This command instantly wipes all rows from the table
+    await pool.query('DELETE FROM parts;');
+    res.status(200).json({ message: 'All parts deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting all parts:', error.message);
+    res.status(500).json({ error: 'Failed to delete all parts' });
+  }
+};
+
 // MUST BE AT THE VERY BOTTOM
 module.exports = { 
   getAllParts, 
@@ -189,5 +201,6 @@ module.exports = {
   deletePart,
   loginUser,
   importCSV,
-  upload
+  upload,
+  deleteAllParts
 };

@@ -96,6 +96,24 @@ export default function App() {
     }
   };
 
+  // --- Delete All Handler (With Double Confirmation) ---
+  const handleDeleteAll = async () => {
+    // First warning
+    if (!window.confirm("🚨 WARNING: Are you absolutely sure you want to DELETE ALL parts?")) return;
+    
+    // Second safety warning for low-IT users
+    if (!window.confirm("FINAL WARNING: This cannot be undone. Click OK to completely wipe the database.")) return;
+
+    try {
+      await api.delete('/parts/all');
+      setParts([]); // Instantly clear the screen
+      alert("Database wiped successfully.");
+    } catch (error) {
+      console.error("Error deleting all parts", error);
+      alert("Failed to wipe database.");
+    }
+  };
+
   // --- 1. SUPER SIMPLE LOGIN SCREEN ---
   if (!isAuthenticated) {
     return (
@@ -139,6 +157,9 @@ export default function App() {
               </button>
               <button onClick={() => window.location.href = 'http://localhost:5000/api/parts/export'} className="px-8 py-4 text-2xl font-bold text-slate-800 bg-sky-300 rounded-2xl shadow-sm hover:bg-sky-400 active:scale-95 transition-transform">
                 📥 Save to Excel
+              </button>
+              <button onClick={handleDeleteAll} className="px-8 py-4 text-2xl font-bold text-white bg-red-600 rounded-2xl shadow-sm hover:bg-red-700 active:scale-95 transition-transform">
+                🗑️ Delete All Parts
               </button>
               <button onClick={() => { setIsAuthenticated(false); setEmail(""); setPassword(""); }} className="px-8 py-4 text-2xl font-bold text-white bg-slate-700 rounded-2xl shadow-sm hover:bg-slate-800 active:scale-95 transition-transform">
                 Logout
@@ -186,7 +207,7 @@ export default function App() {
                 statusBorder = "border-l-red-500";
                 statusBadge = "bg-red-100 text-red-800";
                 statusText = "OUT OF STOCK";
-              } else if (part.stock_items <= 2) {
+              } else if (part.stock_items <= 1) {
                 statusBorder = "border-l-amber-400";
                 statusBadge = "bg-amber-100 text-amber-900";
                 statusText = "LOW STOCK";
