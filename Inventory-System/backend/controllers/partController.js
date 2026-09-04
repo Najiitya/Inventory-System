@@ -4,203 +4,139 @@ const multer = require('multer');
 const fs = require('fs');
 const csv = require('csv-parser');
 
-// 1. Fetch all inventory parts
 const getAllParts = async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM parts ORDER BY id ASC;');
     res.status(200).json(rows);
   } catch (error) {
-    console.error('Error fetching parts:', error.message);
     res.status(500).json({ error: 'Server error while fetching inventory' });
   }
 };
 
-// 2. Increment or Decrement Stock
 const updateStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { change } = req.body; 
+    const { change, side } = req.body; 
+    
+    const column = side === 'left' ? 'left_qty' : side === 'right' ? 'right_qty' : 'qty';
 
     const query = `
       UPDATE parts 
-      SET stock_items = stock_items + $1 
+      SET ${column} = ${column} + $1 
       WHERE id = $2 
       RETURNING *;
     `;
     
     const { rows } = await pool.query(query, [change, id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Part not found' });
-    }
-
+    if (rows.length === 0) return res.status(404).json({ error: 'Part not found' });
     res.status(200).json(rows[0]);
   } catch (error) {
-    console.error('Stock update failed:', error.message);
-    res.status(400).json({ error: 'Cannot update stock. Minimum stock is 0.' });
+    res.status(400).json({ error: 'Cannot update stock.' });
   }
 };
 
-// 3. Export to Excel
 const exportToExcel = async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM parts ORDER BY id ASC;');
-
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Current Inventory');
 
     worksheet.columns = [
       { header: 'Part ID', key: 'id', width: 10 },
-      { header: 'Part Name', key: 'name', width: 35 },
-      { header: 'Brand Name', key: 'brand_name', width: 25 },
-      { header: 'Stock Items', key: 'stock_items', width: 15 },
-      { header: 'Status', key: 'status', width: 20 },
+      { header: 'PRODUCT NAME', key: 'product_name', width: 45 },
+      { header: 'LEFT QTY', key: 'left_qty', width: 15 },
+      { header: 'RIGHT QTY', key: 'right_qty', width: 15 },
+      { header: 'QTY', key: 'qty', width: 15 },
     ];
 
-    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
-    worksheet.getRow(1).alignment = { horizontal: 'center' };
-
-    rows.forEach((part) => {
-      let statusText = 'Available';
-      if (part.stock_items === 0) statusText = 'Out of Stock';
-      else if (part.stock_items === 1) statusText = 'Low';
-
-      worksheet.addRow({
-        id: part.id,
-        name: part.name,
-        brand_name: part.brand_name,
-        stock_items: part.stock_items,
-        status: statusText
-      });
-    });
+    worksheet.getRow(1).font = { bold: true };
+    rows.forEach((part) => worksheet.addRow(part));
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=' + 'Inventory_Report.xlsx');
-
     await workbook.xlsx.write(res);
     res.status(200).end();
   } catch (error) {
-    console.error('Excel export failed:', error.message);
     res.status(500).json({ error: 'Failed to generate Excel file' });
   }
 };
 
-// 4. Add a new part
 const addPart = async (req, res) => {
   try {
-    const { name, brand_name, stock_items } = req.body;
-    
+    const { product_name, left_qty, right_qty, qty } = req.body;
     const query = `
-      INSERT INTO parts (name, brand_name, stock_items) 
-      VALUES ($1, $2, $3) 
-      RETURNING *;
+      INSERT INTO parts (product_name, left_qty, right_qty, qty) 
+      VALUES ($1, $2, $3, $4) RETURNING *;
     `;
-    
-    const startStock = stock_items ? parseInt(stock_items) : 0;
-    
-    const { rows } = await pool.query(query, [name, brand_name, startStock]);
+    const { rows } = await pool.query(query, [product_name, left_qty || 0, right_qty || 0, qty || 0]);
     res.status(201).json(rows[0]);
   } catch (error) {
-    console.error('Error adding part:', error.message);
     res.status(500).json({ error: 'Failed to add part' });
   }
 };
 
-// 5. Delete a part
 const deletePart = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const query = 'DELETE FROM parts WHERE id = $1 RETURNING *;';
-    const { rows } = await pool.query(query, [id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Part not found' });
-    }
-
-    res.status(200).json({ message: 'Part deleted', deletedId: id });
+    await pool.query('DELETE FROM parts WHERE id = $1;', [id]);
+    res.status(200).json({ message: 'Deleted' });
   } catch (error) {
-    console.error('Error deleting part:', error.message);
-    res.status(500).json({ error: 'Failed to delete part' });
+    res.status(500).json({ error: 'Failed to delete' });
   }
 };
 
-// 6. User Login
+const deleteAllParts = async (req, res) => {
+  try {
+    await pool.query('DELETE FROM parts;');
+    res.status(200).json({ message: 'All deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to wipe' });
+  }
+};
+
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const { rows } = await pool.query('SELECT * FROM users WHERE email = $1 AND password = $2', [email, password]);
-
-    if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-    
-    res.status(200).json({ message: 'Login successful', user: { email: rows[0].email } });
+    if (rows.length === 0) return res.status(401).json({ error: 'Invalid auth' });
+    res.status(200).json({ message: 'Success' });
   } catch (error) {
-    console.error('Login error:', error.message);
-    res.status(500).json({ error: 'Server error during login' });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
-// 7. CSV Import Setup
 const upload = multer({ dest: 'uploads/' });
 
 const importCSV = async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No CSV file uploaded' });
-
   const results = [];
   
-  // Read the CSV file
   fs.createReadStream(req.file.path)
     .pipe(csv())
     .on('data', (data) => {
-      // Map only the allowed columns, ignoring everything else
       results.push({
-        name: data.name || data.Name || 'Unknown Part',
-        brand_name: data.brand_name || data.Brand || 'Unknown Brand',
-        stock_items: parseInt(data.stock_items) || parseInt(data.Stock) || 0
+        product_name: data['PRODUCT NAME'] || 'Unknown Part',
+        left_qty: parseInt(data['LEFT QTY']) || 0,
+        right_qty: parseInt(data['RIGHT QTY']) || 0,
+        qty: parseInt(data['QTY']) || 0
       });
     })
     .on('end', async () => {
       try {
         for (const item of results) {
           await pool.query(
-            'INSERT INTO parts (name, brand_name, stock_items) VALUES ($1, $2, $3)',
-            [item.name, item.brand_name, item.stock_items]
+            'INSERT INTO parts (product_name, left_qty, right_qty, qty) VALUES ($1, $2, $3, $4)',
+            [item.product_name, item.left_qty, item.right_qty, item.qty]
           );
         }
-        
         fs.unlinkSync(req.file.path);
-        res.status(200).json({ message: `Successfully imported ${results.length} items.` });
+        res.status(200).json({ message: `Successfully imported items.` });
       } catch (error) {
-        console.error('Database insertion error:', error);
-        res.status(500).json({ error: 'Failed to save CSV data to database' });
+        res.status(500).json({ error: 'Database error' });
       }
     });
 };
 
-// --- NEW: Delete All Parts ---
-const deleteAllParts = async (req, res) => {
-  try {
-    // This command instantly wipes all rows from the table
-    await pool.query('DELETE FROM parts;');
-    res.status(200).json({ message: 'All parts deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting all parts:', error.message);
-    res.status(500).json({ error: 'Failed to delete all parts' });
-  }
-};
-
-// MUST BE AT THE VERY BOTTOM
 module.exports = { 
-  getAllParts, 
-  updateStock, 
-  exportToExcel, 
-  addPart, 
-  deletePart,
-  loginUser,
-  importCSV,
-  upload,
-  deleteAllParts
+  getAllParts, updateStock, exportToExcel, addPart, deletePart, deleteAllParts, loginUser, importCSV, upload 
 };
